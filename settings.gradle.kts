@@ -13,7 +13,7 @@ if (System.getenv("CI") != "true") {
      * Add or remove modules to load as needed for local development here.
      */
     //loadAllIndividualExtensions()
-    loadIndividualExtension("en", "enryumaga")
+    loadIndividualExtension("en", "enryumanga")
 } else {
     // Running in CI (GitHub Actions)
 

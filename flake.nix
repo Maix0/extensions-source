@@ -17,7 +17,7 @@
         };
         sdk =
           (pkgs.androidenv.composeAndroidPackages {
-            buildToolsVersions = ["30.0.3"];
+            buildToolsVersions = ["34.0.0"];
             platformVersions = ["34"];
             abiVersions = ["arm64-v8a"];
             systemImageTypes = [];
