@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.extension.en.cutiecomics
 
 import eu.kanade.tachiyomi.network.GET
+import eu.kanade.tachiyomi.network.asObservableSuccess
 import eu.kanade.tachiyomi.network.interceptor.rateLimitHost
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
@@ -12,6 +13,7 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import okhttp3.Response
+import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import rx.Observable
@@ -44,10 +46,10 @@ class EnryuManga : ParsedHttpSource() {
 
     override fun popularMangaSelector() = "div.flex.justify-center.items-center.flex-wrap"
 
-    override fun popularMangaFromElement(elem: Element) = SManga.create().apply {
-        title = elem.selectFirst("div > div > a")!!.attributes().get("href")
-        name = elem.selectFirst("div > div > h2.card-title")!!.ownText()
-        thumbnail_url = extractProxiedImage(elem.selectFirst("div > div > a > img")!!.attributes().get("src"))
+    override fun popularMangaFromElement(element: Element) = SManga.create().apply {
+        url = element.selectFirst("div > div > a")!!.attributes().get("href")
+        title = element.selectFirst("div > div > h2.card-title")!!.ownText()
+        thumbnail_url = extractProxiedImage(element.selectFirst("div > div > a > img")!!.attributes().get("src"))
     }
 
     override fun popularMangaNextPageSelector() = ""
@@ -120,8 +122,8 @@ class EnryuManga : ParsedHttpSource() {
     override fun mangaDetailsParse(document: Document): SManga {
         var details = document.selectFirst(".hero-content")!!
         return SManga.create().apply {
-            title = details.select("div > h1").ownText()
-            description = details.select("div > p").ownText()
+            title = details.selectFirst("div > h1")!!.ownText()
+            description = details.selectFirst("div > p")!!.ownText()
         }
     }
 
@@ -136,16 +138,18 @@ class EnryuManga : ParsedHttpSource() {
 
     // ============================== Chapters ==============================
     override fun fetchChapterList(manga: SManga): Observable<List<SChapter>> {
-        return Observable.just(
-            GET(manga.url).selectFirst("body > div > div.flex.justify-center.flex-wrap")!!.children().asList()
-                .map({ elem: Element ->
-                    SChapter.create().apply {
-                        url = elem.selectFirst("a")!!.attributes().get("href")
-                        title = elem.selectFirst(".card-title")!!.ownText()
-                        // date = parseDate(elem.selectFirst(".card-body > p").ownText())
+        return client.newCall(GET(manga.url)).asObservableSuccess()
+            .map { it: Response ->
+                Jsoup.parse(it.toString())
+                    .selectFirst("body > div > div.flex.justify-center.flex-wrap")!!.children()
+                    .map { elem: Element ->
+                        SChapter.create().apply {
+                            url = elem.selectFirst("a")!!.attributes().get("href")
+                            name = elem.selectFirst(".card-title")!!.ownText()
+                            // date = parseDate(elem.selectFirst(".card-body > p").ownText())
+                        }
                     }
-                },).asList(),
-        )
+            }
     }
 
     override fun chapterListSelector(): String {
